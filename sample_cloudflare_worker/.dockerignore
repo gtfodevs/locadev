@@ -1,0 +1,14 @@
+# AppleDouble / Finder metadata on exFAT — breaks `docker build` xattr copy
+._*
+**/._*
+.DS_Store
+**/.DS_Store
+.git
+.gitignore
+node_modules
+.wrangler
+.dev.vars
+*.md
+docs
+coverage
+dist

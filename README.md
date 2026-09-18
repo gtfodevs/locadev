@@ -254,6 +254,7 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Fake Slack | **8096** | `slack` | UI `/ui` + GET `/messages` |
 | Fake Discord | **8097** | `discord` | UI `/ui` + GET `/messages` |
 | Azure Functions | **7071** | `functions` | Runtime + sample; storage → Azurite |
+| Cloudflare Worker | **8787** | `cloudflare` | Wrangler `--local` (workerd); override dir via `CLOUDFLARE_WORKER_DIR` |
 | fake-teams | **3979** | `teams` | GET `/api/messages` |
 | echo-bot | **3978** | `teams` | |
 | sample_service | **18080** | `sample` | |
@@ -283,6 +284,7 @@ docker compose --profile aws --profile search up -d --build
 | `ollama` | Dockerized Ollama for the bridge | Real local models from the compose network (Mac: often prefer host Ollama) |
 | `teams` | fake-teams + echo-bot (no M365 tenant, no tunnel) | Bot Framework / Teams; **see** via `GET /api/messages` |
 | `sample` | Minimal in-repo FastAPI consumer on **18080** | Prove end-to-end wiring without another repo |
+| `cloudflare` | Wrangler `--local` Worker on **8787** | Cloudflare-shaped APIs (default sample; or `CLOUDFLARE_WORKER_DIR=../gigchain/auth`) |
 
 ### Azure Functions + Azurite
 
@@ -302,6 +304,23 @@ docker logs locadev-sample-azure-functions 2>&1 | tail -20
 ```
 
 Details: `sample_azure_functions/README.md`.
+
+### Cloudflare Workers (Wrangler local)
+
+Profile `cloudflare` runs **workerd** via `wrangler dev --local` on host port **8787**.
+
+| How you run it | Build context |
+|----------------|---------------|
+| `./scripts/start.sh cloudflare` | `./sample_cloudflare_worker` (default) |
+| `CLOUDFLARE_WORKER_DIR=../gigchain/auth ./scripts/start.sh cloudflare` | Sibling GigChain auth Worker |
+
+```bash
+./scripts/start.sh cloudflare
+curl -s http://127.0.0.1:8787/health
+docker logs locadev-cloudflare-worker 2>&1 | tail -20
+```
+
+OAuth client IDs/secrets: set `GITHUB_*` / `GOOGLE_*` in the environment (or `.env`) before start; the container entrypoint writes them into `.dev.vars` for Wrangler. Details: `sample_cloudflare_worker/README.md`.
 
 ### Seeing messages on fakes
 

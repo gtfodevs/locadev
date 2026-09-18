@@ -323,3 +323,28 @@ services:
       locadev:
         aliases:
           - functions
+
+  # --- profile: cloudflare ---
+  # Wrangler --local (workerd) Worker. Default: sample_cloudflare_worker.
+  # Point at GigChain auth: CLOUDFLARE_WORKER_DIR=../gigchain/auth ./scripts/start.sh cloudflare
+  cloudflare-worker:
+    profiles: ["cloudflare"]
+    build:
+      context: ${CLOUDFLARE_WORKER_DIR:-./sample_cloudflare_worker}
+      dockerfile: Dockerfile
+    container_name: locadev-cloudflare-worker
+    ports:
+      - "8787:8787"
+    environment:
+      ISSUER: ${ISSUER:-http://127.0.0.1:8787}
+      GITHUB_CLIENT_ID: ${GITHUB_CLIENT_ID:-}
+      GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      JWT_SIGNING_JWK: ${JWT_SIGNING_JWK:-}
+      OAUTH_SUCCESS_REDIRECT: ${OAUTH_SUCCESS_REDIRECT:-}
+    networks:
+      locadev:
+        aliases:
+          - cloudflare-worker
+          - wrangler

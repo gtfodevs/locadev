@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample)
+PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample cloudflare)
 DESCRIPTIONS=(
   "Teams channel + bot (:3979/:3978)"
   "MiniStack AWS gateway S3 (:4566)"
@@ -20,6 +20,7 @@ DESCRIPTIONS=(
   "Fake Discord REST + message UI (:8097)"
   "Azure Functions runtime + sample (Azurite storage) (:7071)"
   "Sample FastAPI consumer (:18080)"
+  "Cloudflare Workers (wrangler --local) (:8787)"
 )
 # parallel array of 0/1 selected
 SELECTED=()

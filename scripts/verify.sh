@@ -66,6 +66,7 @@ check "fake-discord" 8097 0
 check "Azure Functions" 7071 0
 check "fake-teams" 3979 0
 check "sample_service" 18080 0
+check "Cloudflare Worker" 8787 0
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Core services FAILED."
