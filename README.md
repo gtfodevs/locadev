@@ -36,7 +36,7 @@
 
 You approve; the agent drives. Desk-hosted cloud sidekick means free offline iteration first, real cloud later. Same SDK shapes; swap env when you go live.
 
-Surfaces today: **Azure**, **AWS**, channel fakes, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
+Surfaces today: **Azure**, **AWS**, channel fakes, **Cloudflare Workers (local)**, **fake OAuth/TOTP/passkeys**, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
 
 | Piece | Where |
 |-------|--------|
@@ -322,19 +322,80 @@ curl -s http://127.0.0.1:8787/health
 docker logs locadev-cloudflare-worker 2>&1 | tail -20
 ```
 
-OAuth client IDs/secrets: set `GITHUB_*` / `GOOGLE_*` in the environment (or `.env`) before start; the container entrypoint writes them into `.dev.vars` for Wrangler. Details: `sample_cloudflare_worker/README.md`.
+OAuth client IDs/secrets: set `GITHUB_*` / `GOOGLE_*` in the environment (or `.env`) before start; the container entrypoint writes them into `.dev.vars` for Wrangler. For **local IdP + MFA**, also enable profile `oauth` and the URL overrides in the section below. Details: `sample_cloudflare_worker/README.md`, `fake_oauth/README.md`.
 
-### Fake OAuth (GitHub + Google)
+### Fake identity — OAuth, TOTP 2FA, soft passkeys
 
-Profile `oauth` runs a local identity fake on **8098**: GitHub/Google OAuth (auth-code + PKCE), TOTP enroll/verify, and soft HMAC passkeys for API tests.
+Profile `oauth` runs **`fake-oauth`** on host port **8098**: a single local identity service for apps (including GigChain auth) that need IdP + MFA without real GitHub/Google, phones, or platform authenticators.
+
+| Capability | What you get |
+|------------|--------------|
+| **GitHub-shaped OAuth** | Authorize / token / user / emails (auth-code + PKCE S256) |
+| **Google-shaped OAuth** | Authorize / token / userinfo (auth-code + PKCE S256) |
+| **TOTP 2FA** | Enroll (secret + otpauth URL), current code, verify |
+| **Soft passkeys** | Register → assert → soft-sign → verify (HMAC, not real WebAuthn) |
+| **UI + OpenAPI** | http://127.0.0.1:8098/ui · http://127.0.0.1:8098/docs |
 
 ```bash
 ./scripts/start.sh oauth
+# or together with Workers auth:
+./scripts/start.sh cloudflare oauth
+
 curl -s http://127.0.0.1:8098/health
-# authorize UI: http://127.0.0.1:8098/login/oauth/authorize?client_id=local&redirect_uri=http://127.0.0.1:8787/login/oauth/github/callback&response_type=code
+open http://127.0.0.1:8098/ui   # browser demo for TOTP + soft passkeys
 ```
 
-Pair with GigChain auth (`CLOUDFLARE_WORKER_DIR=../gigchain/auth`) using the URL overrides in `fake_oauth/README.md` and `sandbox.env.example`.
+#### OAuth endpoints
+
+| Provider | Authorize | Token | Profile / userinfo |
+|----------|-----------|-------|--------------------|
+| GitHub-shaped | `GET /login/oauth/authorize` | `POST /login/oauth/access_token` | `GET /user`, `GET /user/emails` |
+| Google-shaped | `GET /o/oauth2/v2/auth` | `POST /token` | `GET /v1/userinfo` |
+
+- Any `client_id` / `client_secret` accepted.
+- Built-in users: **`alice`**, **`bob`** (HTML picker, or `?login=alice`, or `?auto=1` → alice).
+- Example authorize (auto-approve alice):
+
+```bash
+curl -sI 'http://127.0.0.1:8098/login/oauth/authorize?client_id=local&redirect_uri=http://127.0.0.1:8787/login/oauth/github/callback&response_type=code&auto=1'
+```
+
+#### TOTP
+
+```bash
+curl -s -X POST http://127.0.0.1:8098/totp/enroll -H 'content-type: application/json'   -d '{"user_id":"alice"}'
+curl -s 'http://127.0.0.1:8098/totp/code?user_id=alice'
+curl -s -X POST http://127.0.0.1:8098/totp/verify -H 'content-type: application/json'   -d '{"user_id":"alice","code":"<code from above>"}'
+```
+
+#### Soft passkeys (API tests)
+
+Not real WebAuthn — deterministic HMAC credentials for integration tests:
+
+```bash
+curl -s -X POST http://127.0.0.1:8098/passkey/register -H 'content-type: application/json'   -d '{"user_id":"alice"}'
+# then POST /passkey/assert → /passkey/soft-sign → /passkey/verify
+```
+
+#### Pair with GigChain auth (Cloudflare local)
+
+1. Start both profiles: `./scripts/start.sh cloudflare oauth`
+2. Point auth at the fake via env (see `sandbox.env.example`):
+
+```bash
+export CLOUDFLARE_WORKER_DIR=../gigchain/auth
+export GITHUB_CLIENT_ID=local-github
+export GITHUB_CLIENT_SECRET=local-github-secret
+export GITHUB_AUTHORIZE_URL=http://127.0.0.1:8098/login/oauth/authorize
+export GITHUB_TOKEN_URL=http://127.0.0.1:8098/login/oauth/access_token
+export GITHUB_USERINFO_URL=http://127.0.0.1:8098/user
+export GITHUB_EMAILS_URL=http://127.0.0.1:8098/user/emails
+# same idea for GOOGLE_* → /o/oauth2/v2/auth, /token, /v1/userinfo
+```
+
+From **another compose service**, use host `fake-oauth` (port 8098) instead of `127.0.0.1`.
+
+Full route reference: `fake_oauth/README.md`.
 
 ### Seeing messages on fakes
 
@@ -469,6 +530,7 @@ Health checks only probe ports this stack publishes on `127.0.0.1`. They do not 
 ## Roadmap (non-blocking)
 
 - More cloud providers and services as profiles, same “pick what to spin up” model
+- Hardening fake identity (real WebAuthn soft authenticator option, more IdP shapes)
 - Optional PG-wire gateway in front of PGlite for `psycopg` / Npgsql without HTTP
 - Full `postgres:16` + pgvector profile for heavy concurrency
 - Extra AWS services on MiniStack when a consumer flow needs them
