@@ -255,6 +255,7 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Fake Discord | **8097** | `discord` | UI `/ui` + GET `/messages` |
 | Azure Functions | **7071** | `functions` | Runtime + sample; storage → Azurite |
 | Cloudflare Worker | **8787** | `cloudflare` | Wrangler `--local` (workerd); override dir via `CLOUDFLARE_WORKER_DIR` |
+| Fake OAuth / MFA | **8098** | `oauth` | GitHub + Google OAuth, TOTP 2FA, soft passkeys |
 | fake-teams | **3979** | `teams` | GET `/api/messages` |
 | echo-bot | **3978** | `teams` | |
 | sample_service | **18080** | `sample` | |
@@ -285,6 +286,7 @@ docker compose --profile aws --profile search up -d --build
 | `teams` | fake-teams + echo-bot (no M365 tenant, no tunnel) | Bot Framework / Teams; **see** via `GET /api/messages` |
 | `sample` | Minimal in-repo FastAPI consumer on **18080** | Prove end-to-end wiring without another repo |
 | `cloudflare` | Wrangler `--local` Worker on **8787** | Cloudflare-shaped APIs (default sample; or `CLOUDFLARE_WORKER_DIR=../gigchain/auth`) |
+| `oauth` | Fake GitHub/Google OAuth + TOTP + soft passkeys on **8098** | Local IdP/MFA without real phones or authenticators |
 
 ### Azure Functions + Azurite
 
@@ -321,6 +323,18 @@ docker logs locadev-cloudflare-worker 2>&1 | tail -20
 ```
 
 OAuth client IDs/secrets: set `GITHUB_*` / `GOOGLE_*` in the environment (or `.env`) before start; the container entrypoint writes them into `.dev.vars` for Wrangler. Details: `sample_cloudflare_worker/README.md`.
+
+### Fake OAuth (GitHub + Google)
+
+Profile `oauth` runs a local identity fake on **8098**: GitHub/Google OAuth (auth-code + PKCE), TOTP enroll/verify, and soft HMAC passkeys for API tests.
+
+```bash
+./scripts/start.sh oauth
+curl -s http://127.0.0.1:8098/health
+# authorize UI: http://127.0.0.1:8098/login/oauth/authorize?client_id=local&redirect_uri=http://127.0.0.1:8787/login/oauth/github/callback&response_type=code
+```
+
+Pair with GigChain auth (`CLOUDFLARE_WORKER_DIR=../gigchain/auth`) using the URL overrides in `fake_oauth/README.md` and `sandbox.env.example`.
 
 ### Seeing messages on fakes
 

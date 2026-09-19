@@ -341,6 +341,13 @@ services:
       GITHUB_CLIENT_SECRET: ${GITHUB_CLIENT_SECRET:-}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GITHUB_AUTHORIZE_URL: ${GITHUB_AUTHORIZE_URL:-}
+      GITHUB_TOKEN_URL: ${GITHUB_TOKEN_URL:-}
+      GITHUB_USERINFO_URL: ${GITHUB_USERINFO_URL:-}
+      GITHUB_EMAILS_URL: ${GITHUB_EMAILS_URL:-}
+      GOOGLE_AUTHORIZE_URL: ${GOOGLE_AUTHORIZE_URL:-}
+      GOOGLE_TOKEN_URL: ${GOOGLE_TOKEN_URL:-}
+      GOOGLE_USERINFO_URL: ${GOOGLE_USERINFO_URL:-}
       JWT_SIGNING_JWK: ${JWT_SIGNING_JWK:-}
       OAUTH_SUCCESS_REDIRECT: ${OAUTH_SUCCESS_REDIRECT:-}
     networks:
@@ -348,3 +355,18 @@ services:
         aliases:
           - cloudflare-worker
           - wrangler
+
+  # --- profile: oauth ---
+  # Fake GitHub + Google OAuth (authorization code + PKCE). Port 8098.
+  fake-oauth:
+    profiles: ["oauth"]
+    build: ./fake_oauth
+    container_name: locadev-fake-oauth
+    ports:
+      - "8098:8098"
+    networks:
+      locadev:
+        aliases:
+          - fake-oauth
+          - oauth
+
