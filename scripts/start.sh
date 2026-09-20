@@ -7,11 +7,11 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample cloudflare oauth)
+PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample cloudflare oauth gigchain)
 DESCRIPTIONS=(
   "Teams channel + bot (:3979/:3978)"
   "MiniStack AWS gateway S3 (:4566)"
-  "Cosmos DB vNext emulator (:8081)"
+  "Azure Cosmos DB emulator (:8081)"
   "Qdrant + AI Search emulator (:6333/:8800)"
   "Key Vault lowkey-vault (:8443)"
   "Dockerized Ollama for bridge"
@@ -22,6 +22,7 @@ DESCRIPTIONS=(
   "Sample FastAPI consumer (:18080)"
   "Cloudflare Workers (wrangler --local) (:8787)"
   "Fake OAuth + TOTP + soft passkeys (:8098)"
+  "GigChain Cosmos SDK localnet (:26657/:1317)"
 )
 # parallel array of 0/1 selected
 SELECTED=()
@@ -43,7 +44,8 @@ is_known() {
 }
 
 launch() {
-  local args=(compose -p locadev up -d --build)
+  # Compose v2.2.x only accepts --profile before the subcommand (or via COMPOSE_PROFILES).
+  local args=(compose -p locadev)
   local selected_names=()
   for i in "${!PROFILES[@]}"; do
     if [[ "${SELECTED[$i]}" == "1" ]]; then
@@ -51,6 +53,7 @@ launch() {
       selected_names+=("${PROFILES[$i]}")
     fi
   done
+  args+=(up -d --build)
   echo "Running: docker ${args[*]}"
   if [[ ${#selected_names[@]} -gt 0 ]]; then
     echo "Profiles: ${selected_names[*]}"

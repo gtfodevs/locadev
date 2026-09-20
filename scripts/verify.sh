@@ -68,6 +68,8 @@ check "fake-teams" 3979 0
 check "sample_service" 18080 0
 check "Cloudflare Worker" 8787 0
 check "fake-oauth" 8098 0
+check "gigchain RPC" 26657 0
+check "gigchain REST" 1317 0
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "Core services FAILED."

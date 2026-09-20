@@ -256,6 +256,9 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Azure Functions | **7071** | `functions` | Runtime + sample; storage → Azurite |
 | Cloudflare Worker | **8787** | `cloudflare` | Wrangler `--local` (workerd); override dir via `CLOUDFLARE_WORKER_DIR` |
 | Fake OAuth / MFA | **8098** | `oauth` | GitHub + Google OAuth, TOTP 2FA, soft passkeys |
+| GigChain RPC | **26657** | `gigchain` | CometBFT RPC (Cosmos SDK localnet) |
+| GigChain REST | **1317** | `gigchain` | Cosmos REST gateway |
+| GigChain gRPC | **9090** | `gigchain` | Cosmos gRPC |
 | fake-teams | **3979** | `teams` | GET `/api/messages` |
 | echo-bot | **3978** | `teams` | |
 | sample_service | **18080** | `sample` | |
@@ -275,7 +278,7 @@ docker compose --profile aws --profile search up -d --build
 | Profile | What it adds | When to enable |
 |---|---|---|
 | `aws` | MiniStack on **4566** (LocalStack-shaped; S3 by default, `test`/`test`, `us-east-1`) | Any app using `boto3` + `endpoint_url` for S3 (or more AWS APIs as you enable them) |
-| `cosmos` | Cosmos DB vNext emulator (**8081**, **1234**) | Document DB / chat-history style clients |
+| `cosmos` | Azure Cosmos DB vNext emulator (**8081**, **1234**) | Document DB / chat-history style clients |
 | `search` | Qdrant + Azure AI Search–shaped emulator (**6333**, **8800**) | `azure-search-documents` without a real AI Search resource |
 | `kv` | lowkey-vault on **8443** | Key Vault–aware apps (most can stay on `USE_KEY_VAULT=false`) |
 | `mail` | Fake SendGrid capture on **8095** | Outbound email without leaving the machine; **see** via `GET /captured` |
@@ -496,6 +499,30 @@ pytest -q tests/teams
 Run everything from the Docker **host**, not from inside a random container, so ports match `sandbox.env.example`.
 
 ---
+
+
+### GigChain Cosmos SDK localnet
+
+Profile **`gigchain`** runs GigChain’s Cosmos SDK single-validator node (`gigchaind`) in Docker. This is the **blockchain**, not Azure Cosmos DB (profile `cosmos`).
+
+| Port | Use |
+|------|-----|
+| **26657** | CometBFT RPC |
+| **1317** | REST (gRPC-gateway) |
+| **9090** | gRPC |
+
+```bash
+GIGCHAIN_CHAIN_DIR=../gigchain/chain ./scripts/start.sh gigchain
+curl -s http://127.0.0.1:26657/status | head
+```
+
+First image build compiles `gigchaind` (several minutes). By default each container start resets `/data` (`GIGCHAIN_RESET=1`); set `GIGCHAIN_RESET=0` to keep state.
+
+```bash
+GIGCHAIN_CHAIN_DIR=../gigchain/chain ./scripts/start.sh cloudflare oauth gigchain
+```
+
+See `sample_gigchain/README.md`. On the host without Docker you can also run `make localnet` inside `gigchain/chain`.
 
 ## Troubleshooting
 

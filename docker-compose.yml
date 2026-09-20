@@ -370,3 +370,30 @@ services:
           - fake-oauth
           - oauth
 
+  # --- profile: gigchain ---
+  # Cosmos SDK localnet (gigchaind) for GigChain (NOT Azure Cosmos DB — that is profile `cosmos`).
+  # Default context: ../gigchain/chain. Override with GIGCHAIN_CHAIN_DIR.
+  # Ports: CometBFT RPC 26657, REST 1317, gRPC 9090.
+  gigchain-node:
+    profiles: ["gigchain"]
+    build:
+      context: ${GIGCHAIN_CHAIN_DIR:-../gigchain/chain}
+      dockerfile: Dockerfile.locadev
+    container_name: locadev-gigchain
+    ports:
+      - "26657:26657"
+      - "26656:26656"
+      - "1317:1317"
+      - "9090:9090"
+    environment:
+      GIGCHAIN_CHAIN_ID: ${GIGCHAIN_CHAIN_ID:-localgigchain}
+      GIGCHAIN_RESET: ${GIGCHAIN_RESET:-1}
+      GIGCHAIN_HOME: /data
+      KEYRING_BACKEND: test
+    networks:
+      locadev:
+        aliases:
+          - gigchain
+          - gigchain-node
+          - chain
+
