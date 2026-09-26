@@ -411,7 +411,9 @@ Full route reference: `fake_oauth/README.md`.
 
 ### OpenAI / Groq-compatible bridge routes
 
-Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes with the same backends (`fake` / `ollama` / `claude-cli`). The request's `model` stands in for the Azure deployment name. Tool definitions are accepted and ignored (the fake backend answers with plain text).
+Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes with the same backends (`fake` / `ollama` / `claude-cli`). The request's `model` stands in for the Azure deployment name. Tool definitions are accepted; the fake backend normally answers with plain text.
+
+**Deterministic tool calls (fake backend).** To exercise an app's tool-calling path without a real model, make the last user message `/tool <name> {json args}`. When `<name>` is one of the request's `tools`, the fake backend returns a `tool_calls` response (`finish_reason: "tool_calls"`, streaming or not) instead of text. Example: `/tool send_otp {"phone":"5551234567"}`. Anything else falls back to the normal echo reply.
 
 | Client | Base URL |
 |--------|----------|

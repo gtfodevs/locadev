@@ -9,6 +9,7 @@ from __future__ import annotations
 import hashlib
 import json
 import os
+import re
 import subprocess
 import time
 import uuid
@@ -181,11 +182,96 @@ def _stream_frames(deployment: str, content: str) -> list[str]:
     return frames
 
 
+# --- Fake backend: deterministic tool calls -------------------------------
+# With CHAT_BACKEND=fake, a request that offers `tools` and whose LAST message
+# is a user message of the form
+#     /tool <name> {"json": "args"}
+# gets back an assistant message calling that tool (finish_reason
+# "tool_calls"). Anything else, including follow-up turns after a tool result,
+# gets the normal fake text reply. This lets scripted tests (Autonomo,
+# Playwright, pytest) drive an app's real tool-execution path without an LLM.
+_TOOL_DIRECTIVE = re.compile(r"^\s*/tool\s+([A-Za-z0-9_.-]+)\s*(\{.*\})?\s*$", re.S)
+
+
+def _fake_tool_call(body: dict[str, Any]) -> dict[str, Any] | None:
+    if CHAT_BACKEND != "fake":
+        return None
+    tools = body.get("tools") or []
+    messages = body.get("messages") or []
+    if not tools or not messages or messages[-1].get("role") != "user":
+        return None
+    m = _TOOL_DIRECTIVE.match(_last_user_text(messages[-1:]))
+    if not m:
+        return None
+    name = m.group(1)
+    offered = {
+        (t.get("function") or {}).get("name")
+        for t in tools
+        if isinstance(t, dict)
+    }
+    if name not in offered:
+        return None
+    args = m.group(2) or "{}"
+    try:
+        json.loads(args)
+    except ValueError:
+        return None
+    return {
+        "id": f"call_{uuid.uuid4().hex[:12]}",
+        "type": "function",
+        "function": {"name": name, "arguments": args},
+    }
+
+
+def _tool_call_response(deployment: str, call: dict[str, Any], stream: bool) -> Any:
+    cid = f"chatcmpl-{uuid.uuid4().hex[:12]}"
+    created = int(time.time())
+    if not stream:
+        return {
+            "id": cid,
+            "object": "chat.completion",
+            "created": created,
+            "model": deployment,
+            "choices": [
+                {
+                    "index": 0,
+                    "message": {"role": "assistant", "content": None, "tool_calls": [call]},
+                    "finish_reason": "tool_calls",
+                }
+            ],
+            "usage": {"prompt_tokens": 1, "completion_tokens": 1, "total_tokens": 2},
+        }
+
+    def chunk(delta: dict[str, Any], finish: str | None = None) -> str:
+        return "data: " + json.dumps({
+            "id": cid,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": deployment,
+            "choices": [{"index": 0, "delta": delta, "finish_reason": finish}],
+        }) + "\n\n"
+
+    frames = [
+        chunk({"role": "assistant", "content": None, "tool_calls": [{"index": 0, **call}]}),
+        chunk({}, finish="tool_calls"),
+        "data: [DONE]\n\n",
+    ]
+
+    async def gen():
+        for f in frames:
+            yield f
+
+    return StreamingResponse(gen(), media_type="text/event-stream")
+
+
 @app.post("/openai/deployments/{deployment}/chat/completions")
 async def chat_completions(deployment: str, request: Request) -> Any:
     body = await request.json()
     messages = body.get("messages") or []
     stream = bool(body.get("stream"))
+    call = _fake_tool_call(body)
+    if call is not None:
+        return _tool_call_response(deployment, call, stream)
     try:
         content = await _generate_chat(deployment, messages)
     except RuntimeError as e:

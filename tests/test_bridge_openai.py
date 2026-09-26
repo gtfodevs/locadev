@@ -26,3 +26,34 @@ def test_bridge_groq_shape_chat():
         tools=[{"type": "function", "function": {"name": "noop", "parameters": {"type": "object", "properties": {}}}}],
     )
     assert "groq shape smoke" in (chat.choices[0].message.content or "")
+
+
+def test_bridge_fake_tool_directive():
+    """/tool <name> {json} as the last user message -> deterministic tool call."""
+    require_port(8090, "Bridge")
+    client = OpenAI(base_url=f"{BRIDGE}/openai/v1", api_key="not-used")
+    tools = [{
+        "type": "function",
+        "function": {
+            "name": "send_otp",
+            "parameters": {"type": "object", "properties": {"phone": {"type": "string"}}},
+        },
+    }]
+    chat = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[{"role": "user", "content": '/tool send_otp {"phone": "5551234567"}'}],
+        tools=tools,
+    )
+    choice = chat.choices[0]
+    health = __import__("httpx").get(f"{BRIDGE}/health").json()
+    if health.get("chat_backend") != "fake":
+        return  # directive only applies to the fake backend
+    assert choice.finish_reason == "tool_calls"
+    call = choice.message.tool_calls[0]
+    assert call.function.name == "send_otp"
+    assert '"5551234567"' in call.function.arguments
+    # unknown tool name / no tools -> plain text
+    plain = client.chat.completions.create(
+        model="m", messages=[{"role": "user", "content": "/tool nope {}"}], tools=tools
+    )
+    assert plain.choices[0].message.content
