@@ -295,3 +295,43 @@ async def embeddings(deployment: str, request: Request) -> Any:
         "data": data,
         "usage": {"prompt_tokens": total, "total_tokens": total},
     }
+
+
+# ---------------------------------------------------------------------------
+# OpenAI-compatible surface (plain OpenAI SDK, Groq, and other
+# OpenAI-shaped providers). Same backends as the Azure shape above; the
+# request body's "model" plays the role of the Azure deployment name.
+#   /v1/...         -> OpenAI (base_url=http://127.0.0.1:8090/v1)
+#   /openai/v1/...  -> Groq   (base_url=http://127.0.0.1:8090/openai/v1)
+# Tool/function definitions in the request are accepted and ignored; the
+# fake backend always answers with plain assistant text.
+# ---------------------------------------------------------------------------
+
+
+async def _model_from_body(request: Request) -> str:
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    return str(body.get("model") or "default")
+
+
+@app.post("/v1/chat/completions")
+@app.post("/openai/v1/chat/completions")
+async def openai_chat_completions(request: Request) -> Any:
+    return await chat_completions(await _model_from_body(request), request)
+
+
+@app.post("/v1/embeddings")
+@app.post("/openai/v1/embeddings")
+async def openai_embeddings(request: Request) -> Any:
+    return await embeddings(await _model_from_body(request), request)
+
+
+@app.get("/v1/models")
+@app.get("/openai/v1/models")
+def openai_models() -> dict[str, Any]:
+    return {
+        "object": "list",
+        "data": [{"id": "locadev-fake", "object": "model", "owned_by": "locadev"}],
+    }

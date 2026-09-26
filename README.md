@@ -256,6 +256,12 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Azure Functions | **7071** | `functions` | Runtime + sample; storage → Azurite |
 | Cloudflare Worker | **8787** | `cloudflare` | Wrangler `--local` (workerd); override dir via `CLOUDFLARE_WORKER_DIR` |
 | Fake OAuth / MFA | **8098** | `oauth` | GitHub + Google OAuth, TOTP 2FA, soft passkeys |
+| Fake Twilio (SMS) | **8099** | `sms` | `Messages.json` + GET `/captured` |
+| Fake Geocodio | **8100** | `geo` | forward/reverse geocode, deterministic |
+| Supabase API (Kong) | **54321** | `supabase` | Supabase CLI stack; Auth/REST/Realtime/Storage |
+| Supabase Postgres | **54322** | `supabase` | `postgres:postgres` |
+| Supabase Studio | **54323** | `supabase` | |
+| Supabase Mailpit | **54324** | `supabase` | auth emails (OTP, magic links) |
 | GigChain RPC | **26657** | `gigchain` | CometBFT RPC (Cosmos SDK localnet) |
 | GigChain REST | **1317** | `gigchain` | Cosmos REST gateway |
 | GigChain gRPC | **9090** | `gigchain` | Cosmos gRPC |
@@ -290,6 +296,9 @@ docker compose --profile aws --profile search up -d --build
 | `sample` | Minimal in-repo FastAPI consumer on **18080** | Prove end-to-end wiring without another repo |
 | `cloudflare` | Wrangler `--local` Worker on **8787** | Cloudflare-shaped APIs (default sample; or `CLOUDFLARE_WORKER_DIR=../gigchain/auth`) |
 | `oauth` | Fake GitHub/Google OAuth + TOTP + soft passkeys on **8098** | Local IdP/MFA without real phones or authenticators |
+| `sms` | Fake Twilio Messaging on **8099** | Outbound SMS without leaving the machine; **see** via `GET /captured` |
+| `geo` | Fake Geocodio on **8100** | Address search / reverse geocode without an API key |
+| `supabase` | Local Supabase (Postgres, Auth, PostgREST, Realtime, Storage, Studio, Mailpit) via the **Supabase CLI** on **54321–54324** | Apps built on Supabase; applies the app's own migrations + `seed.sql` |
 
 ### Azure Functions + Azurite
 
@@ -400,6 +409,39 @@ From **another compose service**, use host `fake-oauth` (port 8098) instead of `
 
 Full route reference: `fake_oauth/README.md`.
 
+### OpenAI / Groq-compatible bridge routes
+
+Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes with the same backends (`fake` / `ollama` / `claude-cli`). The request's `model` stands in for the Azure deployment name. Tool definitions are accepted and ignored (the fake backend answers with plain text).
+
+| Client | Base URL |
+|--------|----------|
+| OpenAI SDK / raw `POST /v1/chat/completions`, `/v1/embeddings` | `http://127.0.0.1:8090/v1` |
+| Groq (`/openai/v1/chat/completions`) | `http://127.0.0.1:8090/openai/v1` |
+
+### SMS and geocoding fakes (profiles `sms`, `geo`)
+
+- **`sms`** → `fake-twilio` on **8099**: `POST /2010-04-01/Accounts/{sid}/Messages.json`, inspect with `GET /captured`. See `fake_twilio/README.md`.
+- **`geo`** → `fake-geocodio` on **8100**: `GET /v1.7/geocode?q=…`, `GET /v1.7/reverse?q=lat,lng`. Deterministic, small built-in gazetteer. See `fake_geocodio/README.md`.
+
+Point the app's provider base URL at the fake (e.g. `TWILIO_API_BASE`, `GEOCODIO_API_BASE`); apps that hard-code the vendor host need a one-line env override.
+
+### Supabase (profile `supabase`)
+
+Supabase is a bundle of services (Postgres, GoTrue auth, PostgREST, Realtime, Storage, Studio, Mailpit). locadev runs it through the **Supabase CLI**, Supabase's own local stack, not as a compose service. That way the consumer's `supabase/config.toml`, migrations, and `seed.sql` apply exactly as they will in the cloud project.
+
+```bash
+# dir that CONTAINS supabase/config.toml
+export SUPABASE_PROJECT_DIR=../myapp/db
+./scripts/start.sh supabase          # or: make supabase / scripts/supabase.sh start
+scripts/supabase.sh env              # SUPABASE URL + local demo keys (dotenv form)
+scripts/supabase.sh reset            # re-run migrations + seed (local data only)
+scripts/supabase.sh stop
+```
+
+Without `SUPABASE_PROJECT_DIR`, the minimal `supabase_sample/` project is used. The default `SUPABASE_EXCLUDE` skips `vector,logflare,edge-runtime,imgproxy,supavisor` to keep RAM down. Set it to empty to run everything. Containers land on the same Docker daemon (so on the external DockerData volume) as `supabase_*_<project_id>`, outside the `locadev` compose project and network. From a locadev container, reach them via `host.docker.internal:54321`.
+
+**Limits:** requires the `supabase` CLI on the host. First start pulls ~2–3 GB of images. Phone auth needs `[auth.sms.test_otp]` entries or an SMS provider in the app's `config.toml`.
+
 ### Seeing messages on fakes
 
 | Fake | How to inspect traffic in tests / browser |
@@ -408,6 +450,8 @@ Full route reference: `fake_oauth/README.md`.
 | **Discord** (`discord`) | http://127.0.0.1:8097/ui · `GET /messages` · channel history REST |
 | **Teams** (`teams`) | `GET http://127.0.0.1:3979/api/messages` · transcript endpoints |
 | **SendGrid** (`mail`) | `GET http://127.0.0.1:8095/captured` |
+| **Twilio** (`sms`) | `GET http://127.0.0.1:8099/captured` |
+| **Supabase auth mail** (`supabase`) | http://127.0.0.1:54324 (Mailpit UI) · `GET /api/v1/messages` |
 
 Profiles that are off show as `[--]` in `scripts/verify.sh` rather than failing the core gate. Connectivity tests for optional services **skip** when their port is down.
 

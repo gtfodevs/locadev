@@ -199,6 +199,30 @@ services:
         aliases:
           - sendgrid
 
+  # --- profile: sms ---
+  fake-twilio:
+    profiles: ["sms"]
+    build: ./fake_twilio
+    container_name: locadev-fake-twilio
+    ports:
+      - "8099:8099"
+    networks:
+      locadev:
+        aliases:
+          - twilio
+
+  # --- profile: geo ---
+  fake-geocodio:
+    profiles: ["geo"]
+    build: ./fake_geocodio
+    container_name: locadev-fake-geocodio
+    ports:
+      - "8100:8100"
+    networks:
+      locadev:
+        aliases:
+          - geocodio
+
   # --- profile: slack ---
   fake-slack:
     profiles: ["slack"]

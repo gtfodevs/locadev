@@ -33,6 +33,10 @@ AWS_ENDPOINT = "http://127.0.0.1:4566"
 MAIL = "http://127.0.0.1:8095"
 AISEARCH = "http://127.0.0.1:8800"
 TEAMS = "http://127.0.0.1:3979"
+TWILIO = "http://127.0.0.1:8099"
+GEOCODIO = "http://127.0.0.1:8100"
+SUPABASE = "http://127.0.0.1:54321"
+SUPABASE_MAILPIT = "http://127.0.0.1:54324"
 
 
 def port_open(port: int, host: str = "127.0.0.1", timeout: float = 1.0) -> bool:

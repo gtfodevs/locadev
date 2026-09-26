@@ -1,6 +1,6 @@
 COMPOSE := docker compose -p locadev
 
-.PHONY: start up teams down verify test logs harness playground site pre-decision post-ready boards
+.PHONY: start up teams down verify test logs harness playground site pre-decision post-ready boards supabase supabase-down supabase-env
 
 start:
 	bash scripts/start.sh
@@ -50,3 +50,14 @@ playground:
 	@if [ ! -d demos/playground/.venv ]; then python3 -m venv demos/playground/.venv; fi
 	. demos/playground/.venv/bin/activate && pip -q install -r demos/playground/requirements.txt
 	cd demos/playground && . .venv/bin/activate && uvicorn app:app --host 127.0.0.1 --port 19191
+
+# Supabase local stack via Supabase CLI (profile "supabase"; see scripts/supabase.sh)
+# Example: make supabase SUPABASE_PROJECT_DIR=../myapp/db
+supabase:
+	bash scripts/supabase.sh start
+
+supabase-down:
+	bash scripts/supabase.sh stop
+
+supabase-env:
+	@bash scripts/supabase.sh env
