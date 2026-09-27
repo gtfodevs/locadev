@@ -4,7 +4,9 @@ Shapes follow Geocodio v1.x JSON (results[].formatted_address, location,
 address_components, accuracy, accuracy_type, source). Any api_key accepted.
 
 Resolution order for forward geocoding:
-  1. A small built-in gazetteer of US places (substring match, case-insensitive)
+  1. A small built-in gazetteer of US places (whole-word match, case-insensitive;
+     the city/state part after the first comma wins over the street part, and
+     the longest matching name wins, so "Washington Ave, Irvine" is Irvine)
   2. A trailing 5-digit ZIP in the query, if the gazetteer knows it
   3. Otherwise a stable pseudo-location inside the continental US derived from
      a hash of the query, so the same text always returns the same point.
@@ -84,18 +86,29 @@ def _hash_point(text: str) -> tuple[float, float]:
     return lat, lng
 
 
+def _match_place(q: str) -> tuple | None:
+    parts = [p.strip().lower() for p in q.split(",")]
+    # Prefer the locality part ("city, ST zip"), then the whole query.
+    for text in (", ".join(parts[1:]), q.lower()):
+        if not text.strip():
+            continue
+        hits = [p for p in PLACES if re.search(rf"\b{re.escape(p[0])}\b", text)]
+        if hits:
+            return max(hits, key=lambda p: len(p[0]))
+    return None
+
+
 def _forward(q: str) -> list[dict[str, Any]]:
-    ql = q.lower()
     street = q.split(",")[0].strip()
-    for place in PLACES:
-        if place[0] in ql:
-            if street.lower() == place[0]:
-                return [_result("", place, place[5], place[6], 0.9, "place")]
-            # jitter street addresses a little so different streets differ
-            h = hashlib.sha256(street.lower().encode()).digest()
-            dlat = (h[0] - 128) / 128 * 0.02
-            dlng = (h[1] - 128) / 128 * 0.02
-            return [_result(street, place, place[5] + dlat, place[6] + dlng, 1.0, "rooftop")]
+    place = _match_place(q)
+    if place:
+        if street.lower() == place[0]:
+            return [_result("", place, place[5], place[6], 0.9, "place")]
+        # jitter street addresses a little so different streets differ
+        h = hashlib.sha256(street.lower().encode()).digest()
+        dlat = (h[0] - 128) / 128 * 0.02
+        dlng = (h[1] - 128) / 128 * 0.02
+        return [_result(street, place, place[5] + dlat, place[6] + dlng, 1.0, "rooftop")]
     zm = re.search(r"\b(\d{5})\b\s*$", q)
     if zm:
         for place in PLACES:
@@ -127,6 +140,8 @@ def reverse(version: str, q: str = Query(""), limit: int = 0, api_key: str = "")
         lat, lng = float(lat_s), float(lng_s)
     except Exception:
         return JSONResponse(status_code=422, content={"error": "Invalid coordinate"})
+    if not (-90.0 <= lat <= 90.0 and -180.0 <= lng <= 180.0) or lat != lat or lng != lng:
+        return JSONResponse(status_code=422, content={"error": "Coordinate out of range"})
     place = _nearest(lat, lng)
     h = int(hashlib.sha256(f"{lat:.4f},{lng:.4f}".encode()).hexdigest()[:4], 16)
     street = f"{100 + h % 9800} Main St"

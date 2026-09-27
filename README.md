@@ -271,6 +271,15 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 
 **Core (always on):** azurite, mssql, servicebus, bridge, topaz, pglite, redis.
 
+**Network exposure.** Published ports use Docker's default binding, which is
+all interfaces (`0.0.0.0`), so anyone on the same Wi-Fi/LAN can reach them.
+The fakes accept any credentials and `GET /captured` returns every captured
+email/SMS (including login codes), and the bridge forwards to real AI backends
+when configured. Use locadev on trusted networks, or keep the host firewall on.
+To publish a service on loopback only, change its mapping to
+`"127.0.0.1:<host>:<container>"` in a local compose override (bindings in this
+file are left as-is for compatibility).
+
 ---
 
 ## Profiles — pick what to spin up

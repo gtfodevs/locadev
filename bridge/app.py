@@ -389,29 +389,47 @@ async def embeddings(deployment: str, request: Request) -> Any:
 # request body's "model" plays the role of the Azure deployment name.
 #   /v1/...         -> OpenAI (base_url=http://127.0.0.1:8090/v1)
 #   /openai/v1/...  -> Groq   (base_url=http://127.0.0.1:8090/openai/v1)
-# Tool/function definitions in the request are accepted and ignored; the
-# fake backend always answers with plain assistant text.
+# Tool/function definitions in the request are passed through. The fake
+# backend answers with plain assistant text, except for the deterministic
+# "/tool <name> {json}" directive (see _tool_directive), which returns a
+# tool call when <name> is one of the request's tools.
 # ---------------------------------------------------------------------------
 
 
-async def _model_from_body(request: Request) -> str:
+async def _model_from_body(request: Request) -> str | None:
+    """Model name from a JSON object body, or None if the body is not JSON."""
     try:
         body = await request.json()
     except Exception:
-        body = {}
+        return None
+    if not isinstance(body, dict):
+        return None
     return str(body.get("model") or "default")
+
+
+def _bad_json() -> JSONResponse:
+    return JSONResponse(
+        status_code=400,
+        content={"error": {"message": "Request body must be a JSON object.", "type": "invalid_request_error"}},
+    )
 
 
 @app.post("/v1/chat/completions")
 @app.post("/openai/v1/chat/completions")
 async def openai_chat_completions(request: Request) -> Any:
-    return await chat_completions(await _model_from_body(request), request)
+    model = await _model_from_body(request)
+    if model is None:
+        return _bad_json()
+    return await chat_completions(model, request)
 
 
 @app.post("/v1/embeddings")
 @app.post("/openai/v1/embeddings")
 async def openai_embeddings(request: Request) -> Any:
-    return await embeddings(await _model_from_body(request), request)
+    model = await _model_from_body(request)
+    if model is None:
+        return _bad_json()
+    return await embeddings(model, request)
 
 
 @app.get("/v1/models")

@@ -1,5 +1,7 @@
 """OpenAI-compatible (non-Azure) bridge routes: plain OpenAI SDK + Groq path shape."""
 
+import pytest
+
 from openai import OpenAI
 
 from conftest import BRIDGE, require_port
@@ -47,7 +49,7 @@ def test_bridge_fake_tool_directive():
     choice = chat.choices[0]
     health = __import__("httpx").get(f"{BRIDGE}/health").json()
     if health.get("chat_backend") != "fake":
-        return  # directive only applies to the fake backend
+        pytest.skip("/tool directive only applies to the fake chat backend")
     assert choice.finish_reason == "tool_calls"
     call = choice.message.tool_calls[0]
     assert call.function.name == "send_otp"
