@@ -258,6 +258,7 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Fake OAuth / MFA | **8098** | `oauth` | GitHub + Google OAuth, TOTP 2FA, soft passkeys |
 | Fake Twilio (SMS) | **8099** | `sms` | `Messages.json` + GET `/captured` |
 | Fake Geocodio | **8100** | `geo` | forward/reverse geocode, deterministic |
+| Fake Bunny Stream | **8101** | `bunny` | create video + local HLS slate, `GET /captured` |
 | Supabase API (Kong) | **54321** | `supabase` | Supabase CLI stack; Auth/REST/Realtime/Storage |
 | Supabase Postgres | **54322** | `supabase` | `postgres:postgres` |
 | Supabase Studio | **54323** | `supabase` | |
@@ -307,6 +308,7 @@ docker compose --profile aws --profile search up -d --build
 | `oauth` | Fake GitHub/Google OAuth + TOTP + soft passkeys on **8098** | Local IdP/MFA without real phones or authenticators |
 | `sms` | Fake Twilio Messaging on **8099** | Outbound SMS without leaving the machine; **see** via `GET /captured` |
 | `geo` | Fake Geocodio on **8100** | Address search / reverse geocode without an API key |
+| `bunny` | Fake Bunny Stream on **8101** | Create a video and play a one-second local HLS slate; **see** via `GET /captured` |
 | `supabase` | Local Supabase (Postgres, Auth, PostgREST, Realtime, Storage, Studio, Mailpit) via the **Supabase CLI** on **54321–54324** | Apps built on Supabase; applies the app's own migrations + `seed.sql` |
 
 ### Azure Functions + Azurite
@@ -433,8 +435,9 @@ Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes
 
 - **`sms`** → `fake-twilio` on **8099**: `POST /2010-04-01/Accounts/{sid}/Messages.json`, inspect with `GET /captured`. See `fake_twilio/README.md`.
 - **`geo`** → `fake-geocodio` on **8100**: `GET /v1.7/geocode?q=…`, `GET /v1.7/reverse?q=lat,lng`. Deterministic, small built-in gazetteer. See `fake_geocodio/README.md`.
+- **`bunny`** → `fake-bunny` on **8101**: `POST /library/{id}/videos` with an `AccessKey` header, then `GET /{guid}/playlist.m3u8`. Playback is a one-second local slate. See `fake_bunny/README.md`.
 
-Point the app's provider base URL at the fake (e.g. `TWILIO_API_BASE`, `GEOCODIO_API_BASE`); apps that hard-code the vendor host need a one-line env override.
+Point the app's provider base URL at the fake (e.g. `TWILIO_API_BASE`, `GEOCODIO_API_BASE`, `BUNNY_API_BASE`); apps that hard-code the vendor host need a one-line env override.
 
 ### Supabase (profile `supabase`)
 
@@ -462,6 +465,7 @@ Without `SUPABASE_PROJECT_DIR`, the minimal `supabase_sample/` project is used. 
 | **Teams** (`teams`) | `GET http://127.0.0.1:3979/api/messages` · transcript endpoints |
 | **SendGrid** (`mail`) | `GET http://127.0.0.1:8095/captured` |
 | **Twilio** (`sms`) | `GET http://127.0.0.1:8099/captured` |
+| **Bunny Stream** (`bunny`) | `GET http://127.0.0.1:8101/captured` · preview http://127.0.0.1:8101/preview |
 | **Supabase auth mail** (`supabase`) | http://127.0.0.1:54324 (Mailpit UI) · `GET /api/v1/messages` |
 
 Profiles that are off show as `[--]` in `scripts/verify.sh` rather than failing the core gate. Connectivity tests for optional services **skip** when their port is down.

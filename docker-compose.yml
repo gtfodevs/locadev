@@ -223,6 +223,18 @@ services:
         aliases:
           - geocodio
 
+  # --- profile: bunny ---
+  fake-bunny:
+    profiles: ["bunny"]
+    build: ./fake_bunny
+    container_name: locadev-fake-bunny
+    ports:
+      - "8101:8101"
+    networks:
+      locadev:
+        aliases:
+          - bunny
+
   # --- profile: slack ---
   fake-slack:
     profiles: ["slack"]
