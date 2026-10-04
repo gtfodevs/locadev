@@ -235,6 +235,26 @@ services:
         aliases:
           - bunny
 
+  # --- profile: stripe ---
+  fake-stripe:
+    profiles: ["stripe"]
+    build: ./fake_stripe
+    container_name: locadev-fake-stripe
+    ports:
+      - "8102:8102"
+    environment:
+      STRIPE_WEBHOOK_URL: ${STRIPE_WEBHOOK_URL:-http://host.docker.internal:8006/api/stripe-webhook}
+      STRIPE_CONNECT_WEBHOOK_URL: ${STRIPE_CONNECT_WEBHOOK_URL:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-whsec_locadev_platform}
+      STRIPE_CONNECT_WEBHOOK_SECRET: ${STRIPE_CONNECT_WEBHOOK_SECRET:-whsec_locadev_connect}
+      FAKE_STRIPE_PUBLIC_URL: ${FAKE_STRIPE_PUBLIC_URL:-http://127.0.0.1:8102}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    networks:
+      locadev:
+        aliases:
+          - stripe
+
   # --- profile: slack ---
   fake-slack:
     profiles: ["slack"]

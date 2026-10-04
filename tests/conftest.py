@@ -36,6 +36,7 @@ TEAMS = "http://127.0.0.1:3979"
 TWILIO = "http://127.0.0.1:8099"
 GEOCODIO = "http://127.0.0.1:8100"
 BUNNY = "http://127.0.0.1:8101"
+STRIPE = "http://127.0.0.1:8102"
 SUPABASE = "http://127.0.0.1:54321"
 SUPABASE_MAILPIT = "http://127.0.0.1:54324"
 

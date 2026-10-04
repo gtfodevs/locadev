@@ -73,6 +73,7 @@ check "gigchain REST" 1317 0
 check "fake-twilio" 8099 0
 check "fake-geocodio" 8100 0
 check "fake-bunny" 8101 0
+check "fake-stripe" 8102 0
 check "Supabase API" 54321 0
 check "Supabase DB" 54322 0
 check "Supabase Studio" 54323 0
