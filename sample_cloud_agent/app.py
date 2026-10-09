@@ -215,7 +215,8 @@ def _items_prompt(raw: Any) -> str:
 @app.post("/responses")
 async def responses(request: Request) -> Any:
     body = await request.json()
-    session = str((body.get("metadata") or {}).get("session") or body.get("user") or "default")
+    session = (request.headers.get("x-locadev-session")
+               or str((body.get("metadata") or {}).get("session") or body.get("user") or "default"))
     try:
         result = await run_agent(_items_prompt(body.get("input")), session)
     except RuntimeError as e:

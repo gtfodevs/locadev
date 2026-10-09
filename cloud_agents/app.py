@@ -832,7 +832,9 @@ async def _foundry_respond(project: str, path_agent: str | None, request: Reques
         fwd_body.pop("conversation", None)
         fwd_body.pop("stream", None)
         try:
-            r = await _client.post(f"{target}/responses", json=fwd_body)
+            # x-locadev-session lets the container tag its own model calls and spans
+            r = await _client.post(f"{target}/responses", json=fwd_body,
+                                   headers={"x-locadev-session": session})
         except httpx.HTTPError as e:
             EVENTS.add("invoke", **base, target=target, status=502,
                        response=f"container unreachable: {type(e).__name__}")
