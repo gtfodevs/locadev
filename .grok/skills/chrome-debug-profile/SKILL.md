@@ -45,13 +45,16 @@ If missing: **warn** and show setup — do not invent paths.
 chrome-profile-sync
 # or: ~/.grok/skills/chrome-debug-profile/scripts/sync-chrome-profile.sh
 
-# 2) Debug Chrome
+# 2) Debug Chrome (opens start page with append-only URL history)
 chrome-debug
 # or: ~/.grok/skills/chrome-debug-profile/scripts/launch-chrome-debug.sh
 
 # 3) Confirm
 curl -s http://127.0.0.1:9222/json/version
 ```
+
+**Start page:** history list with **no dedupe**, ordered by **last entered** (newest first).  
+Config `startUrl: "start-page"` (default). See `~/.grok/skills/chrome-debug-profile/start-page/`.
 
 Playwright:
 
