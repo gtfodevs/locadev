@@ -36,7 +36,7 @@
 
 You approve; the agent drives. Desk-hosted cloud sidekick means free offline iteration first, real cloud later. Same SDK shapes; swap env when you go live.
 
-Surfaces today: **Azure**, **AWS**, channel fakes, **Cloudflare Workers (local)**, **fake OAuth/TOTP/passkeys**, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
+Surfaces today: **Azure**, **AWS**, **GCP**, **managed agent runtimes** (AgentCore, Foundry Agent Service, Agent Platform) with scripted scenarios for evals, channel fakes, **Cloudflare Workers (local)**, **fake OAuth/TOTP/passkeys**, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
 
 | Piece | Where |
 |-------|--------|
@@ -136,6 +136,7 @@ Say these out loud before you lean on the stack for “production-like” confid
 | Full Azure AI Search (semantic rerank, rich OData) | Qdrant-backed emulator: partial `$filter`, approximate hybrid/semantic scores |
 | Multi-tenant / multi-connection Postgres | **PGlite** (WASM Postgres + pgvector) for app data — single-connection spirit, not a full server |
 | A published SQL Server for apps | The only MSSQL in the stack is **internal to the Service Bus emulator** and is **not** an app DB |
+| Managed agent runtimes (AgentCore, Foundry Agent Service, Agent Platform) | Public invoke APIs and the vendors' container contracts are matched and tested with the real SDKs. IAM and auth are not checked, there is no microVM isolation, and Memory Bank is approximated. AgentCore Memory, Gateway, and the built-in tools are not emulated. See [`cloud_agents/README.md`](cloud_agents/README.md#honest-limitations). |
 | Real cloud fidelity | Same API shapes and SDK contracts where it matters for local dev; approximations are documented next to the code |
 
 When an emulator only approximates the real service, that approximation is intentional and documented. Prefer finding limits in this README (or service READMEs) over discovering them at runtime.
@@ -259,6 +260,12 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Fake Twilio (SMS) | **8099** | `sms` | `Messages.json` + GET `/captured` |
 | Fake Geocodio | **8100** | `geo` | forward/reverse geocode, deterministic |
 | Fake Bunny Stream | **8101** | `bunny` | create video + local HLS slate, `GET /captured` |
+| Cloud agents hub (AgentCore / Foundry / Agent Platform runtimes, scenarios, events) | **8103** | `agents` | `/_locadev/events`, `/_locadev/scenarios`, `/_locadev/reset`; see [`cloud_agents/README.md`](cloud_agents/README.md) |
+| OTLP/HTTP receiver | **4318** | `agents` | same hub; spans become events |
+| Sample cloud agent | **18081** | `agents` | one container, all three runtime contracts |
+| GCP Pub/Sub emulator | **8085** | `gcp` | `PUBSUB_EMULATOR_HOST=127.0.0.1:8085` |
+| GCP Firestore emulator | **8086** | `gcp` | `FIRESTORE_EMULATOR_HOST=127.0.0.1:8086` |
+| GCP Storage (fake-gcs-server) | **4443** | `gcp` | `STORAGE_EMULATOR_HOST=http://127.0.0.1:4443` |
 | Fake Stripe | **8102** | `stripe` | Checkout Sessions, PaymentIntents, Connect direct charges, signed webhooks, `GET /captured` |
 | Supabase API (Kong) | **54321** | `supabase` | Supabase CLI stack; Auth/REST/Realtime/Storage |
 | Supabase Postgres | **54322** | `supabase` | `postgres:postgres` |
@@ -311,6 +318,8 @@ docker compose --profile aws --profile search up -d --build
 | `geo` | Fake Geocodio on **8100** | Address search / reverse geocode without an API key |
 | `bunny` | Fake Bunny Stream on **8101** | Create a video and play a one-second local HLS slate; **see** via `GET /captured` |
 | `stripe` | Fake Stripe on **8102** | Connect direct-charge Checkout Sessions and PaymentIntents, hosted pay page, signed (Connect) webhooks; **see** via `GET /captured` |
+| `agents` | Managed agent runtimes on **8103**: AWS Bedrock AgentCore `InvokeAgentRuntime`, Azure Foundry Agent Service (agents, conversations, responses), GCP Agent Platform `reasoningEngines` (query, streamQuery, sessions, Memory Bank). Also scripted scenarios, an event log, reset, and OTLP on **4318**. | Building or evaluating agents for any of the three clouds before a real POC. See [`cloud_agents/README.md`](cloud_agents/README.md) |
+| `gcp` | Google's Pub/Sub (**8085**) and Firestore (**8086**) emulators, plus fake-gcs-server (**4443**) | GCP apps via the `*_EMULATOR_HOST` env vars |
 | `supabase` | Local Supabase (Postgres, Auth, PostgREST, Realtime, Storage, Studio, Mailpit) via the **Supabase CLI** on **54321–54324** | Apps built on Supabase; applies the app's own migrations + `seed.sql` |
 
 ### Azure Functions + Azurite
@@ -432,6 +441,11 @@ Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes
 |--------|----------|
 | OpenAI SDK / raw `POST /v1/chat/completions`, `/v1/embeddings` | `http://127.0.0.1:8090/v1` |
 | Groq (`/openai/v1/chat/completions`) | `http://127.0.0.1:8090/openai/v1` |
+| OpenAI Responses API (`/v1/responses`, `/openai/v1/responses`) | `http://127.0.0.1:8090/v1` |
+| Bedrock Converse (`boto3.client("bedrock-runtime", endpoint_url=...)`) | `http://127.0.0.1:8090` |
+| Gemini `generateContent` (Vertex or Gemini API path; `google-genai` with `http_options=HttpOptions(base_url=...)`) | `http://127.0.0.1:8090/` |
+
+**Scenarios.** When profile `agents` is up, every model call on any of these shapes first checks the hub for a matching `model`-layer scenario, which can return canned or scripted text, tool calls, or errors. Each call is also recorded in the hub's event log. See [`cloud_agents/README.md`](cloud_agents/README.md#scenarios-canned-and-scripted-responses).
 
 ### SMS and geocoding fakes (profiles `sms`, `geo`)
 

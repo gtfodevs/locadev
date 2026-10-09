@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 
-PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample cloudflare oauth gigchain sms geo bunny stripe supabase)
+PROFILES=(teams aws cosmos search kv ollama mail slack discord functions sample cloudflare oauth gigchain sms geo bunny stripe agents gcp supabase)
 DESCRIPTIONS=(
   "Teams channel + bot (:3979/:3978)"
   "MiniStack AWS gateway S3 (:4566)"
@@ -27,6 +27,8 @@ DESCRIPTIONS=(
   "Fake Geocodio geocoding (:8100)"
   "Fake Bunny Stream (:8101)"
   "Fake Stripe API + Connect webhooks (:8102)"
+  "Agent runtimes: AgentCore / Foundry / Agent Platform + scenarios (:8103, OTLP :4318)"
+  "GCP emulators: Pub/Sub, Firestore, Storage (:8085/:8086/:4443)"
   "Supabase local stack via Supabase CLI (:54321-54324; needs SUPABASE_PROJECT_DIR)"
 )
 # parallel array of 0/1 selected

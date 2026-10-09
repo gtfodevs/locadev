@@ -74,6 +74,12 @@ check "fake-twilio" 8099 0
 check "fake-geocodio" 8100 0
 check "fake-bunny" 8101 0
 check "fake-stripe" 8102 0
+check "cloud-agents" 8103 0
+check "cloud-agents OTLP" 4318 0
+check "sample-cloud-agent" 18081 0
+check "GCP Pub/Sub" 8085 0
+check "GCP Firestore" 8086 0
+check "GCP Storage" 4443 0
 check "Supabase API" 54321 0
 check "Supabase DB" 54322 0
 check "Supabase Studio" 54323 0
