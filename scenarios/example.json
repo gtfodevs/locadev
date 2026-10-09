@@ -1,0 +1,28 @@
+{
+  "name": "locadev example scenarios",
+  "scenarios": [
+    {
+      "id": "refund-escalation",
+      "layer": "model",
+      "match": {"prompt": "(?i)refund.*B2"},
+      "script": [
+        {"tool_call": {"name": "lookup_order", "arguments": {"order_id": "B2"}}},
+        {"tool_call": {"name": "post_slack", "arguments": {"channel": "#support", "text": "Refund for order B2 needs a human."}}},
+        {"text": "Order B2 is refund_pending; I've asked the support team to follow up."}
+      ],
+      "then": "loop"
+    },
+    {
+      "id": "aws-throttle-drill",
+      "layer": "agent",
+      "match": {"cloud": "aws", "prompt": "(?i)^throttle me"},
+      "respond": {"error": {"status": 429, "type": "ThrottlingException", "message": "Rate exceeded"}}
+    },
+    {
+      "id": "gcp-canned-stream",
+      "layer": "agent",
+      "match": {"cloud": "gcp", "prompt": "(?i)^canned"},
+      "respond": {"stream": ["Hello ", "from a ", "canned stream."], "delay_ms": 50}
+    }
+  ]
+}

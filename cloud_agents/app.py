@@ -400,7 +400,7 @@ async def _forward(
     )
 
 
-def _stream_text(chunks: list[str], fmt: str) -> list[bytes]:
+def _stream_text(chunks: list[Any], fmt: str) -> list[bytes]:
     if fmt == "sse":
         return [f"data: {json.dumps(c)}\n\n".encode() for c in chunks]
     return [(json.dumps(c) + "\n").encode() for c in chunks]

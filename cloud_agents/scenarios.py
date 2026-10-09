@@ -26,10 +26,10 @@ A scenario file is JSON:
     }
 
 Match keys (all optional): cloud (aws|azure|gcp|openai), agent, model, session,
-prompt (regex searched in the last user text), turn (1-based call count for this
-scenario + session). A step is one of: text, tool_call, json (raw body for the
-agent layer), error {status, type, message}; any step may add delay_ms and
-stream (list of text chunks for streaming surfaces).
+prompt (regex searched in the last user text), turn (1-based count of calls
+that matched the other keys, per scenario + session). A step is one of: text, tool_call, json (raw body for the
+agent layer), error {status, type, message}, stream (list of text chunks,
+sent as separate chunks on streaming surfaces); any step may add delay_ms.
 
 `respond` is a one-step script that never runs out (a canned reply).
 """
@@ -42,7 +42,7 @@ from typing import Any
 
 LAYERS = {"model", "agent"}
 THEN = {"repeat_last", "loop", "fallthrough"}
-STEP_KINDS = {"text", "tool_call", "json", "error"}
+STEP_KINDS = {"text", "stream", "tool_call", "json", "error"}
 
 
 class ScenarioError(ValueError):
@@ -163,9 +163,12 @@ class ScenarioStore:
             for s in self._scenarios:
                 if s["layer"] != layer:
                     continue
+                if not _matches(s["match"], ctx):
+                    continue
                 key = (s["id"], session)
                 turn = self._turns.get(key, 0) + 1
-                if not _matches(s["match"], ctx, turn):
+                self._turns[key] = turn
+                if "turn" in s["match"] and int(s["match"]["turn"]) != turn:
                     continue
                 pos = self._cursor.get(key, 0)
                 steps = s["steps"]
@@ -173,18 +176,16 @@ class ScenarioStore:
                     if s["then"] == "fallthrough":
                         continue
                     pos = 0 if s["then"] == "loop" else len(steps) - 1
-                self._turns[key] = turn
                 self._cursor[key] = pos + 1
                 return {"scenario": s["id"], "step": steps[pos], "index": pos, "turn": turn}
         return None
 
 
-def _matches(m: dict[str, Any], ctx: dict[str, Any], turn: int) -> bool:
+def _matches(m: dict[str, Any], ctx: dict[str, Any]) -> bool:
+    """Every key except turn (which match() counts itself)."""
     for k in ("cloud", "agent", "model", "session"):
         if k in m and str(m[k]) != str(ctx.get(k) or ""):
             return False
-    if "turn" in m and int(m["turn"]) != turn:
-        return False
     if "prompt" in m and not re.search(m["prompt"], str(ctx.get("prompt") or "")):
         return False
     return True
