@@ -36,7 +36,7 @@
 
 You approve; the agent drives. Desk-hosted cloud sidekick means free offline iteration first, real cloud later. Same SDK shapes; swap env when you go live.
 
-Surfaces today: **Azure**, **AWS**, channel fakes, **Cloudflare Workers (local)**, **fake OAuth/TOTP/passkeys**, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
+Surfaces today: **Azure**, **AWS**, **GCP**, **managed agent runtimes** (AgentCore, Foundry Agent Service, Agent Platform) with scripted scenarios for evals, channel fakes, **Cloudflare Workers (local)**, **fake OAuth/TOTP/passkeys**, browser-first boards, optional **boards API CLI**, more via profiles. Hooks keep the AI honest.
 
 | Piece | Where |
 |-------|--------|
@@ -136,6 +136,7 @@ Say these out loud before you lean on the stack for “production-like” confid
 | Full Azure AI Search (semantic rerank, rich OData) | Qdrant-backed emulator: partial `$filter`, approximate hybrid/semantic scores |
 | Multi-tenant / multi-connection Postgres | **PGlite** (WASM Postgres + pgvector) for app data — single-connection spirit, not a full server |
 | A published SQL Server for apps | The only MSSQL in the stack is **internal to the Service Bus emulator** and is **not** an app DB |
+| Managed agent runtimes (AgentCore, Foundry Agent Service, Agent Platform) | Public invoke APIs and the vendors' container contracts are matched and tested with the real SDKs. IAM and auth are not checked, there is no microVM isolation, and Memory Bank is approximated. AgentCore Memory, Gateway, and the built-in tools are not emulated. See [`cloud_agents/README.md`](cloud_agents/README.md#honest-limitations). |
 | Real cloud fidelity | Same API shapes and SDK contracts where it matters for local dev; approximations are documented next to the code |
 
 When an emulator only approximates the real service, that approximation is intentional and documented. Prefer finding limits in this README (or service READMEs) over discovering them at runtime.
@@ -256,6 +257,20 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | Azure Functions | **7071** | `functions` | Runtime + sample; storage → Azurite |
 | Cloudflare Worker | **8787** | `cloudflare` | Wrangler `--local` (workerd); override dir via `CLOUDFLARE_WORKER_DIR` |
 | Fake OAuth / MFA | **8098** | `oauth` | GitHub + Google OAuth, TOTP 2FA, soft passkeys |
+| Fake Twilio (SMS) | **8099** | `sms` | `Messages.json` + GET `/captured` |
+| Fake Geocodio | **8100** | `geo` | forward/reverse geocode, deterministic |
+| Fake Bunny Stream | **8101** | `bunny` | create video + local HLS slate, `GET /captured` |
+| Cloud agents hub (AgentCore / Foundry / Agent Platform runtimes, scenarios, events) | **8103** | `agents` | `/_locadev/events`, `/_locadev/scenarios`, `/_locadev/reset`; see [`cloud_agents/README.md`](cloud_agents/README.md) |
+| OTLP/HTTP receiver | **4318** | `agents` | same hub; spans become events |
+| Sample cloud agent | **18081** | `agents` | one container, all three runtime contracts |
+| GCP Pub/Sub emulator | **8085** | `gcp` | `PUBSUB_EMULATOR_HOST=127.0.0.1:8085` |
+| GCP Firestore emulator | **8086** | `gcp` | `FIRESTORE_EMULATOR_HOST=127.0.0.1:8086` |
+| GCP Storage (fake-gcs-server) | **4443** | `gcp` | `STORAGE_EMULATOR_HOST=http://127.0.0.1:4443` |
+| Fake Stripe | **8102** | `stripe` | Checkout Sessions, PaymentIntents, Connect direct charges, signed webhooks, `GET /captured` |
+| Supabase API (Kong) | **54321** | `supabase` | Supabase CLI stack; Auth/REST/Realtime/Storage |
+| Supabase Postgres | **54322** | `supabase` | `postgres:postgres` |
+| Supabase Studio | **54323** | `supabase` | |
+| Supabase Mailpit | **54324** | `supabase` | auth emails (OTP, magic links) |
 | GigChain RPC | **26657** | `gigchain` | CometBFT RPC (Cosmos SDK localnet) |
 | GigChain REST | **1317** | `gigchain` | Cosmos REST gateway |
 | GigChain gRPC | **9090** | `gigchain` | Cosmos gRPC |
@@ -264,6 +279,15 @@ Ports are fixed to avoid common local clashes. Do not renumber without a documen
 | sample_service | **18080** | `sample` | |
 
 **Core (always on):** azurite, mssql, servicebus, bridge, topaz, pglite, redis.
+
+**Network exposure.** Published ports use Docker's default binding, which is
+all interfaces (`0.0.0.0`), so anyone on the same Wi-Fi/LAN can reach them.
+The fakes accept any credentials and `GET /captured` returns every captured
+email/SMS (including login codes), and the bridge forwards to real AI backends
+when configured. Use locadev on trusted networks, or keep the host firewall on.
+To publish a service on loopback only, change its mapping to
+`"127.0.0.1:<host>:<container>"` in a local compose override (bindings in this
+file are left as-is for compatibility).
 
 ---
 
@@ -290,6 +314,13 @@ docker compose --profile aws --profile search up -d --build
 | `sample` | Minimal in-repo FastAPI consumer on **18080** | Prove end-to-end wiring without another repo |
 | `cloudflare` | Wrangler `--local` Worker on **8787** | Cloudflare-shaped APIs (default sample; or `CLOUDFLARE_WORKER_DIR=../gigchain/auth`) |
 | `oauth` | Fake GitHub/Google OAuth + TOTP + soft passkeys on **8098** | Local IdP/MFA without real phones or authenticators |
+| `sms` | Fake Twilio Messaging on **8099** | Outbound SMS without leaving the machine; **see** via `GET /captured` |
+| `geo` | Fake Geocodio on **8100** | Address search / reverse geocode without an API key |
+| `bunny` | Fake Bunny Stream on **8101** | Create a video and play a one-second local HLS slate; **see** via `GET /captured` |
+| `stripe` | Fake Stripe on **8102** | Connect direct-charge Checkout Sessions and PaymentIntents, hosted pay page, signed (Connect) webhooks; **see** via `GET /captured` |
+| `agents` | Managed agent runtimes on **8103**: AWS Bedrock AgentCore `InvokeAgentRuntime`, Azure Foundry Agent Service (agents, conversations, responses), GCP Agent Platform `reasoningEngines` (query, streamQuery, sessions, Memory Bank). Also scripted scenarios, an event log, reset, and OTLP on **4318**. | Building or evaluating agents for any of the three clouds before a real POC. See [`cloud_agents/README.md`](cloud_agents/README.md) |
+| `gcp` | Google's Pub/Sub (**8085**) and Firestore (**8086**) emulators, plus fake-gcs-server (**4443**) | GCP apps via the `*_EMULATOR_HOST` env vars |
+| `supabase` | Local Supabase (Postgres, Auth, PostgREST, Realtime, Storage, Studio, Mailpit) via the **Supabase CLI** on **54321–54324** | Apps built on Supabase; applies the app's own migrations + `seed.sql` |
 
 ### Azure Functions + Azurite
 
@@ -400,6 +431,48 @@ From **another compose service**, use host `fake-oauth` (port 8098) instead of `
 
 Full route reference: `fake_oauth/README.md`.
 
+### OpenAI / Groq-compatible bridge routes
+
+Besides the Azure shape, the bridge answers the plain OpenAI and Groq URL shapes with the same backends (`fake` / `ollama` / `claude-cli`). The request's `model` stands in for the Azure deployment name. Tool definitions are accepted; the fake backend normally answers with plain text.
+
+**Deterministic tool calls (fake backend).** To exercise an app's tool-calling path without a real model, make the last user message `/tool <name> {json args}`. When `<name>` is one of the request's `tools`, the fake backend returns a `tool_calls` response (`finish_reason: "tool_calls"`, streaming or not) instead of text. Example: `/tool send_otp {"phone":"5551234567"}`. Anything else falls back to the normal echo reply.
+
+| Client | Base URL |
+|--------|----------|
+| OpenAI SDK / raw `POST /v1/chat/completions`, `/v1/embeddings` | `http://127.0.0.1:8090/v1` |
+| Groq (`/openai/v1/chat/completions`) | `http://127.0.0.1:8090/openai/v1` |
+| OpenAI Responses API (`/v1/responses`, `/openai/v1/responses`) | `http://127.0.0.1:8090/v1` |
+| Bedrock Converse (`boto3.client("bedrock-runtime", endpoint_url=...)`) | `http://127.0.0.1:8090` |
+| Gemini `generateContent` (Vertex or Gemini API path; `google-genai` with `http_options=HttpOptions(base_url=...)`) | `http://127.0.0.1:8090/` |
+
+**Scenarios.** When profile `agents` is up, every model call on any of these shapes first checks the hub for a matching `model`-layer scenario, which can return canned or scripted text, tool calls, or errors. Each call is also recorded in the hub's event log. See [`cloud_agents/README.md`](cloud_agents/README.md#scenarios-canned-and-scripted-responses).
+
+### SMS and geocoding fakes (profiles `sms`, `geo`)
+
+- **`sms`** → `fake-twilio` on **8099**: `POST /2010-04-01/Accounts/{sid}/Messages.json`, inspect with `GET /captured`. See `fake_twilio/README.md`.
+- **`geo`** → `fake-geocodio` on **8100**: `GET /v1.7/geocode?q=…`, `GET /v1.7/reverse?q=lat,lng`. Deterministic, small built-in gazetteer. See `fake_geocodio/README.md`.
+- **`bunny`** → `fake-bunny` on **8101**: `POST /library/{id}/videos` with an `AccessKey` header, then `GET /{guid}/playlist.m3u8`. Playback is a one-second local slate. See `fake_bunny/README.md`.
+- **`stripe`** → `fake-stripe` on **8102**: point the app at `STRIPE_API_BASE=http://127.0.0.1:8102` with any `sk_test_` key. `Stripe-Account` scopes objects; `session.url` opens a local pay page; webhooks are signed with `whsec_locadev_platform` / `whsec_locadev_connect`. See `fake_stripe/README.md`.
+
+Point the app's provider base URL at the fake (e.g. `TWILIO_API_BASE`, `GEOCODIO_API_BASE`, `BUNNY_API_BASE`); apps that hard-code the vendor host need a one-line env override.
+
+### Supabase (profile `supabase`)
+
+Supabase is a bundle of services (Postgres, GoTrue auth, PostgREST, Realtime, Storage, Studio, Mailpit). locadev runs it through the **Supabase CLI**, Supabase's own local stack, not as a compose service. That way the consumer's `supabase/config.toml`, migrations, and `seed.sql` apply exactly as they will in the cloud project.
+
+```bash
+# dir that CONTAINS supabase/config.toml
+export SUPABASE_PROJECT_DIR=../myapp/db
+./scripts/start.sh supabase          # or: make supabase / scripts/supabase.sh start
+scripts/supabase.sh env              # SUPABASE URL + local demo keys (dotenv form)
+scripts/supabase.sh reset            # re-run migrations + seed (local data only)
+scripts/supabase.sh stop
+```
+
+Without `SUPABASE_PROJECT_DIR`, the minimal `supabase_sample/` project is used. The default `SUPABASE_EXCLUDE` skips `vector,logflare,edge-runtime,imgproxy,supavisor` to keep RAM down. Set it to empty to run everything. Containers land on the same Docker daemon (so on the external DockerData volume) as `supabase_*_<project_id>`, outside the `locadev` compose project and network. From a locadev container, reach them via `host.docker.internal:54321`.
+
+**Limits:** requires the `supabase` CLI on the host. First start pulls ~2–3 GB of images. Phone auth needs `[auth.sms.test_otp]` entries or an SMS provider in the app's `config.toml`.
+
 ### Seeing messages on fakes
 
 | Fake | How to inspect traffic in tests / browser |
@@ -408,6 +481,10 @@ Full route reference: `fake_oauth/README.md`.
 | **Discord** (`discord`) | http://127.0.0.1:8097/ui · `GET /messages` · channel history REST |
 | **Teams** (`teams`) | `GET http://127.0.0.1:3979/api/messages` · transcript endpoints |
 | **SendGrid** (`mail`) | `GET http://127.0.0.1:8095/captured` |
+| **Twilio** (`sms`) | `GET http://127.0.0.1:8099/captured` |
+| **Bunny Stream** (`bunny`) | `GET http://127.0.0.1:8101/captured` · preview http://127.0.0.1:8101/preview |
+| **Stripe** (`stripe`) | `GET http://127.0.0.1:8102/captured` · pay page `session.url` |
+| **Supabase auth mail** (`supabase`) | http://127.0.0.1:54324 (Mailpit UI) · `GET /api/v1/messages` |
 
 Profiles that are off show as `[--]` in `scripts/verify.sh` rather than failing the core gate. Connectivity tests for optional services **skip** when their port is down.
 
