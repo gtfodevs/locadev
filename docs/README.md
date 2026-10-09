@@ -13,6 +13,8 @@ The site may be served from **GitHub Pages** or a **custom subdomain**. The page
 | [browser-skills.md](./browser-skills.md) | **Proven pattern**: session + Playwright + layered skills |
 | [../boards/README.md](../boards/README.md) | Jira + Azure DevOps |
 | [../hooks/README.md](../hooks/README.md) | Pre/post grounding |
+| [../cloud_agents/README.md](../cloud_agents/README.md) | Managed agent runtimes (AgentCore, Foundry, Agent Platform), scenarios, eval hooks |
+| [../bridge/README.md](../bridge/README.md) | Model bridge: Azure OpenAI, OpenAI, Responses, Groq, Bedrock Converse, Gemini |
 
 No build step — pure HTML/CSS + logos + **inline GitHub mark SVG** (no CDN).
 

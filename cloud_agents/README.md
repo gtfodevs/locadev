@@ -73,7 +73,9 @@ AGENT_RUNTIME_TARGETS='orders=http://host.docker.internal:8080'
 Foundry: an agent created with `create_version` and `kind: "prompt"` runs on
 the bridge. An agent that is only in `FOUNDRY_TARGETS` (or has `kind: "hosted"`)
 is forwarded to the container's `/responses` with the conversation history as
-`input`.
+`input`, plus an `x-locadev-session: <conversation id>` header so the container
+can tag its own model calls and spans with the conversation (that is how
+evidence lines up per conversation).
 
 Point the agent's own model client at the bridge (`http://bridge:8090` inside
 compose) so its model calls are scriptable and logged too.

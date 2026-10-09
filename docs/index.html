@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>locadev — you type, AI runs the rest</title>
-  <meta name="description" content="Full AI workflow: gather &amp; clarify (Slack/Discord/Teams), update Jira and Azure DevOps boards, ship with gh — local Azure/AWS-shaped cloud on your desk. Open source on GitHub: gtfodevs/locadev." />
+  <meta name="description" content="Full AI workflow: gather &amp; clarify (Slack/Discord/Teams), update Jira and Azure DevOps boards, ship with gh — local Azure/AWS/GCP-shaped cloud and managed agent runtimes (AgentCore, Foundry, Agent Platform) on your desk. Open source on GitHub: gtfodevs/locadev." />
   <meta property="og:title" content="locadev — full AI workflow, local cloud" />
   <meta property="og:description" content="You type. AI gathers, clarifies in-channel, updates Jira/ADO boards, opens PRs with gh. Source &amp; docs: github.com/gtfodevs/locadev" />
   <meta property="og:image" content="./localdev-logo.jpg" />
@@ -662,7 +662,7 @@
         <strong>clarify</strong> them in Slack / Discord / Teams, update
         <strong>Jira</strong> and <strong>Azure DevOps</strong> boards,
         open PRs with <strong><code>gh</code></strong>, and exercise
-        <strong>desk-hosted Azure &amp; AWS–shaped resources</strong> — while
+        <strong>desk-hosted Azure, AWS &amp; GCP–shaped resources</strong>, managed agent runtimes included — while
         <strong>pre/post hooks</strong> refuse decisions and “ready” without citations and receipts.
         You type. You approve. The machine ships the busywork.
       </p>
@@ -722,7 +722,7 @@
         </article>
         <article class="card">
           <h3><span class="icon icon-violet">5</span> Local cloud buffet</h3>
-          <p>Summon only the Azure/AWS-shaped bits you need: blobs, bus, SQL, Redis, Functions-style workers, S3, mail, channel fakes — env-only wiring.</p>
+          <p>Summon only the Azure/AWS/GCP-shaped bits you need: blobs, bus, SQL, Redis, Functions-style workers, S3, Pub/Sub, Firestore, managed agent runtimes, mail, channel fakes — env-only wiring.</p>
         </article>
         <article class="card">
           <h3><span class="icon icon-green">6</span> Grounded “ready”</h3>
@@ -791,6 +791,14 @@
           <p>MiniStack S3 on :4566. <code>endpoint_url</code>, test keys, no surprise invoice.</p>
         </article>
         <article class="card">
+          <h3><span class="icon icon-amber">◎</span> GCP cosplay</h3>
+          <p>Google's own Pub/Sub and Firestore emulators plus fake-gcs-server. Point the <code>*_EMULATOR_HOST</code> vars at them.</p>
+        </article>
+        <article class="card">
+          <h3><span class="icon icon-violet">⚙</span> Agent runtimes</h3>
+          <p>Bedrock AgentCore, Foundry Agent Service and Agent Platform invoke APIs in front of your agent container. Scripted scenarios, an event log and reset for evals.</p>
+        </article>
+        <article class="card">
           <h3><span class="icon icon-blue">💬</span> Channel cosplay</h3>
           <p>Fake Slack / Discord / Teams so agents can post clarifications and you can <em>see</em> the messages land.</p>
         </article>
@@ -848,6 +856,18 @@
             <tr><td><code>functions</code></td><td>Azure Functions runtime + sample (Azurite storage)</td><td>7071</td></tr>
             <tr><td><code>teams</code></td><td>Fake Teams + echo bot — clarify in-channel</td><td>3979</td></tr>
             <tr><td><code>sample</code></td><td>In-repo FastAPI consumer</td><td>18080</td></tr>
+            <tr><td><code>agents</code></td><td>Managed agent runtimes: AWS AgentCore, Azure Foundry Agent Service, GCP Agent Platform · scenarios, events, reset, OTLP</td><td>8103</td></tr>
+            <tr><td><code>gcp</code></td><td>Pub/Sub + Firestore emulators, fake-gcs-server</td><td>8085 / 8086 / 4443</td></tr>
+            <tr><td><code>kv</code></td><td>Key Vault (lowkey-vault)</td><td>8443</td></tr>
+            <tr><td><code>ollama</code></td><td>Dockerized Ollama for the bridge</td><td>—</td></tr>
+            <tr><td><code>cloudflare</code></td><td>Wrangler local Workers</td><td>8787</td></tr>
+            <tr><td><code>oauth</code></td><td>Fake GitHub/Google OAuth, TOTP, soft passkeys</td><td>8098</td></tr>
+            <tr><td><code>sms</code></td><td>Fake Twilio SMS (+ <code>/captured</code>)</td><td>8099</td></tr>
+            <tr><td><code>geo</code></td><td>Fake Geocodio</td><td>8100</td></tr>
+            <tr><td><code>bunny</code></td><td>Fake Bunny Stream (local HLS slate)</td><td>8101</td></tr>
+            <tr><td><code>stripe</code></td><td>Fake Stripe: Checkout, PaymentIntents, Connect webhooks</td><td>8102</td></tr>
+            <tr><td><code>gigchain</code></td><td>Cosmos SDK localnet</td><td>26657</td></tr>
+            <tr><td><code>supabase</code></td><td>Local Supabase via the Supabase CLI</td><td>54321–54324</td></tr>
           </tbody>
         </table>
       </div>
@@ -888,7 +908,7 @@
       <div class="callout">
         <h2>Not magic — just honest</h2>
         <p>
-          Local cloud is a <strong>sidekick</strong>, not a free Azure/AWS subscription in a trench coat.
+          Local cloud is a <strong>sidekick</strong>, not a free Azure/AWS/GCP subscription in a trench coat.
           Topaz ≠ Entra. PGlite ≠ multi-writer Postgres. AI Search is partial.
           Hooks force citations so the AI doesn’t paper over those gaps — or invent requirements.
           Source of truth:

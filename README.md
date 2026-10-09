@@ -31,7 +31,7 @@
 2. **Gather** — docs, UIs, **chat threads**, **PDF/Excel attachments**, tickets (not only structured Jira fields)
 3. **Clarify / update boards** — same browser session (or local channel fakes for practice)
 4. **Ship with `gh`** — PRs/checks
-5. **Summon local Azure/AWS-shaped resources** in Docker (env-only client wiring)
+5. **Summon local Azure/AWS/GCP-shaped resources** in Docker, including managed agent runtimes (env-only client wiring)
 6. **Pre/post grounding** — citations from **snapshots**, not vibes
 
 You approve; the agent drives. Desk-hosted cloud sidekick means free offline iteration first, real cloud later. Same SDK shapes; swap env when you go live.
@@ -45,6 +45,8 @@ Surfaces today: **Azure**, **AWS**, **GCP**, **managed agent runtimes** (AgentCo
 | Hooks protocol | [`hooks/README.md`](hooks/README.md) |
 | Work boards (browser + optional API) | [`boards/README.md`](boards/README.md) |
 | Agent rules | [`AGENTS.md`](AGENTS.md) |
+| Managed agent runtimes + eval hooks | [`cloud_agents/README.md`](cloud_agents/README.md) |
+| Model bridge (all provider shapes) | [`bridge/README.md`](bridge/README.md) |
 
 ---
 

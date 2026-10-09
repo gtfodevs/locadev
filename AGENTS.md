@@ -3,7 +3,7 @@
 This repo is **locadev**: a **full AI workflow** plus **local cloud resources**.
 
 - **You (human)** type and approve.
-- **You (agent)** drive work primarily through the **user’s signed-in browser** (`/chrome-debug-profile` + Playwright), gather requirements from **UIs, chat, PDFs, Excel, tickets**, update boards in that session (API keys optional), use **`gh`** for GitHub, implement against desk-hosted Azure/AWS-shaped services, and only claim **ready** after **`/grounding`** passes.
+- **You (agent)** drive work primarily through the **user’s signed-in browser** (`/chrome-debug-profile` + Playwright), gather requirements from **UIs, chat, PDFs, Excel, tickets**, update boards in that session (API keys optional), use **`gh`** for GitHub, implement against desk-hosted Azure/AWS/GCP-shaped services (including managed agent runtimes, profile `agents`), and only claim **ready** after **`/grounding`** passes.
 
 Overview: `README.md`. Spec: `spec.md`. Hooks: `hooks/README.md`. Browser-first: **`docs/browser-skills.md`**. Site: `docs/index.html`.
 
@@ -41,6 +41,7 @@ chrome-debug + playwright (signed-in session)
 | `./boards/board.sh` | **Optional** API path for Jira/ADO |
 | Slack / Discord / Teams | Real UI via browser, or local compose fakes for practice |
 | Docker + compose | Local cloud + fakes |
+| Profile `agents` (:8103) | AgentCore / Foundry / Agent Platform runtimes; `/_locadev/events`, `/_locadev/reset`, `/_locadev/scenarios` for evals (see `cloud_agents/README.md`) |
 
 Local channel fakes (practice offline):
 
