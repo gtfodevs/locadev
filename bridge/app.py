@@ -527,6 +527,34 @@ def openai_models() -> dict[str, Any]:
     }
 
 
+_MOD_CATEGORIES = ("harassment", "hate", "self-harm", "sexual", "violence")
+
+
+@app.post("/v1/moderations")
+@app.post("/openai/v1/moderations")
+async def openai_moderations(request: Request) -> Any:
+    """Deterministic fake: flags only inputs containing LOCADEV_FLAG."""
+    try:
+        body = await request.json()
+    except Exception:
+        return _bad_json()
+    inputs = body.get("input", "")
+    inputs = inputs if isinstance(inputs, list) else [inputs]
+    results = []
+    for item in inputs:
+        flagged = "LOCADEV_FLAG" in json.dumps(item)
+        results.append({
+            "flagged": flagged,
+            "categories": {c: flagged for c in _MOD_CATEGORIES},
+            "category_scores": {c: (0.99 if flagged else 0.0001) for c in _MOD_CATEGORIES},
+        })
+    return {
+        "id": f"modr-{uuid.uuid4().hex[:12]}",
+        "model": body.get("model") or "omni-moderation-latest",
+        "results": results,
+    }
+
+
 # ---------------------------------------------------------------------------
 # Bedrock Runtime Converse (AWS). boto3: client("bedrock-runtime",
 # endpoint_url="http://127.0.0.1:8090").converse(modelId=..., messages=...)
